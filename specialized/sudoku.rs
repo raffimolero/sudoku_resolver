@@ -4,11 +4,11 @@
 //INFO: algo with specialized types
 
 use std::{
-    io,
     fmt::{Display, Formatter},
+    io,
+    iter::FromIterator,
     ops::{Add, AddAssign, Sub, SubAssign},
     str::FromStr,
-    iter::FromIterator
 };
 
 #[derive(Clone, Eq, PartialEq)]
@@ -25,7 +25,7 @@ impl NumSet {
     const EMPTY: Self = Self(0);
 
     fn one_hot(val: u8) -> Self {
-        NumSet(1 << val)
+        Self(1 << val)
     }
 
     fn val(self) -> u8 {
@@ -80,14 +80,16 @@ impl Iterator for NumSetIter {
     type Item = NumSet;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while self.mask < (1 << 9) {
+        loop {
+            self.mask >>= 1;
+            if self.mask == 0 {
+                return None;
+            }
             let masked = self.set.0 & self.mask;
-            self.mask <<= 1;
             if masked != 0 {
                 return Some(NumSet(masked));
             }
         }
-        None
     }
 }
 
@@ -95,7 +97,10 @@ impl IntoIterator for NumSet {
     type Item = NumSet;
     type IntoIter = NumSetIter;
     fn into_iter(self) -> NumSetIter {
-        NumSetIter { set: self, mask: 1 }
+        NumSetIter {
+            set: self,
+            mask: 1 << 9,
+        }
     }
 }
 
@@ -154,8 +159,8 @@ impl Grid {
         NumSet::from_iter(
             self.data[i..i + 3]
                 .iter()
-                .chain(self.data[i + 9..i + 12].iter())
-                .chain(self.data[i + 18..i + 21].iter())
+                .chain(&self.data[i + 9..i + 12])
+                .chain(&self.data[i + 18..i + 21])
                 .copied(),
         )
     }
@@ -259,7 +264,6 @@ impl Display for Grid {
 //     }
 //     Ok(())
 // }
-
 
 fn main() {
     // Iterate over the lines in io::stdin()
